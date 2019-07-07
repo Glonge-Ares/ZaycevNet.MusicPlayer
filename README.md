@@ -1,4 +1,7 @@
 # ZaycevNet.MusicPlayer
+# MIT License
+
+
 Garry's Mod Expression2 Music Player
 
 
