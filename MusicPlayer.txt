@@ -1,0 +1,579 @@
+@name zaycev.net
+@inputs
+@outputs 
+@persist Last:string Pos1 Pos2 Search:string SearchResult Pressed IsPlaying IsPlaying_last E:wirelink
+@trigger 
+
+#Songs for test:
+            #Two Steps from hell invincible
+            #Panic! At The Disco-I Wanna Be Free
+            #Panic! At The Disco-Bittersweet 
+            #Excision - NightShine
+
+#noDuplications()
+#entity():setAlpha(0)
+#entity():propNotSolid(234)
+#entity():propFreeze(0)
+
+
+
+function string find_something(Data:string, Find:string, Find2:string, Pos1_Move, Pos2_Move, ShouldChange)
+{
+
+
+    if(ShouldChange == 1)
+    {
+        Pos1 = Data:find(Find, Pos2)+Find:length()
+        
+        Pos2 = Data:find(Find2, Pos1) - 1
+        
+        Pos1 += Pos1_Move
+        
+        Pos2 += Pos2_Move
+        
+        return Data:sub(Pos1, Pos2):replace("&ndash;", " - "):replace("&amp;", "")
+    }
+    else
+    {
+        Pos3 = Data:find(Find)+Find:length()
+        
+        Pos4 = Data:find(Find2, Pos3) - 1
+        
+        Pos3 += Pos1_Move
+        
+        Pos4 += Pos2_Move
+        
+        #return Data:sub(Pos3, Pos4):replace("&ndash;", " - "):replace("&amp;", " - ")
+        return Data:sub(Pos3, Pos4):replace("&ndash;", " - "):replace("&amp;", ""):replace("&quot;","")
+    }
+    
+    
+    
+}
+
+
+
+
+function string get_direct_link(Link:string)
+{
+    
+    httpRequest(Link)
+    
+    if(!httpSuccess())
+    {
+        Data = "error"
+        return Data
+    }
+        Data = httpData()
+     
+       
+        DirectLink = find_something(Data, "<a target=\"__blank\" data-cacheable=\"true\" class=\"button-download__link\" id=\"audiotrack-download-link--dwnl\" href=\"", "?ext.page=default\"", 0,0,0)
+        print(DirectLink)
+    
+    #if(DirectLink:find("</script>") != 0)
+    #{
+        #print(DirectLink)
+    #    return "error"
+    
+    #}
+    
+        return DirectLink    
+    
+    
+}
+
+function number play()
+{
+    if(IsPlaying_last != IsPlaying)
+    {
+        
+        #print(IsPlaying + " " + IsPlaying_last)
+        
+        if(IsPlaying != 0)
+        {
+            Info2 = Search:explode("[separator]")
+            
+            
+            for(I = 1, IsPlaying)
+            {
+                Info = Info2[I,string]:explode("[endl]")
+            }
+            
+            #print(Info[2,string])
+            Url = get_direct_link(Info[2,string])
+            
+            if(Url == "error")
+            {
+                return 0
+            }
+            else
+            {
+                soundURLpause(1)
+                soundURLdelete(1)
+                
+                
+                print("Started playing")
+                soundURLload(1, Url, 100, 0, owner())
+                #soundURLload(1, Url, 100, 0, owner())
+                #soundURLload(1, Url, 100, 0, owner())
+                
+                
+                soundURLplay(1)
+                
+                httpRequest("http://example25y43fjsdhfgd.com")
+                
+                return IsPlaying
+                
+            }
+        }
+        else
+        {
+            soundURLpause(1)
+            soundURLdelete(1)
+            
+        }
+        
+
+    }
+    
+    return IsPlaying
+}
+
+
+
+
+function number search_zaycev_net(Song:string, Results:number)
+{
+    Link = "http://zaycev.net/search.html?query_search="
+    Link += httpUrlEncode(Song:replace(" ","+"))
+    
+        
+    httpRequest(Link)
+       
+    if(!httpSuccess())
+    {
+        return 0
+    }
+    
+    E:egpClear()
+    
+    
+    Data = httpData()
+    
+    Search = ""
+    
+
+    for(I = 1, Results)
+    {
+        #if(find_something(Data, "<div itemprop=\"name\" class=\"musicset-track__track-name\"><a href=\"", "\"",0,0,0):find("www.w3.org/1999/xhtml") == 0)
+        
+        if(find_something(Data, "<div itemprop=\"name\" class=\"musicset-track__track-name\"><a href=\"", "\"",0,0,0):length() <= 33)
+        {
+           # print(find_something(Data, "<div itemprop=\"name\" class=\"musicset-track__track-name\"><a href=\"", "\"",0,0,0):find("www.w3.org/1999/xhtml"))
+            Search += find_something(Data,"<i class=\"musicset-player__icon\" title=\"", "\"></i>", 21, 0,1) + "[endl]" + "http://zaycev.net" + find_something(Data, "<div itemprop=\"name\" class=\"musicset-track__track-name\"><a href=\"", "\"",0,0,1)
+            Search += "[separator]"
+            
+        }
+        
+        #{
+            #print(find_something(Data, "<div itemprop=\"name\" class=\"musicset-track__track-name\"><a href=\"", "\"",0,0,0):find("www.w3.org/1999/xhtml"))
+        #}
+
+        
+        I++
+    }     
+    
+    print("Found")
+
+    if(Search == "")
+    {
+        return 1
+    }
+    
+    IsPlaying = 0
+    
+    return 1
+}
+
+
+function draw_results(Results:number, PlayStatus:number)
+{
+    Info2 = Search:explode("[separator]")
+    
+    Move = 45
+    
+    ErrorCount = 0
+    
+    for(I = 1, Results)
+    {
+        Info = Info2[I,string]:explode("[endl]")
+        
+        if(Info[1,string] != "")
+        {
+            if(Info[1,string]:find("www.w3.org/1999/xhtml") != 0)
+            {
+                ErrorCount++
+                continue
+            }
+
+            E:egpBox(13*I,vec2(0,180)+vec2(0, Move*(I-ErrorCount)),vec2(55,30))
+            
+
+            
+            
+            if(PlayStatus != I)
+            {
+                E:egpText(34*I,"▶",vec2(0,180)+vec2(0, Move*(I-ErrorCount))-vec2(-4,24))
+                E:egpSize(34*I,46)
+                
+            }
+            else
+            {
+                E:egpText(34*I,"||",vec2(0,180)+vec2(0, Move*(I-ErrorCount))-vec2(1,16))
+                E:egpSize(34*I,27)
+                
+            }
+            
+
+            
+           
+        
+             E:egpColor(34*I,vec(255,255,255))
+            
+            
+
+        
+         
+            
+            
+            
+            #if(Pressed == I)
+            #{
+            #    
+            #    E:egpColor(13*I,vec(255,0,0))
+            #}
+            
+            #{
+                E:egpColor(13*I,vec(0,170,220))
+            #}
+            
+            #if(Info[1,string]:find("www.w3.org/1999/xhtml") == 0)
+            #{
+                E:egpText(7*I,Info[1,string], vec2(40, 167) + vec2(0, Move*(I-ErrorCount)))
+            #}
+            
+            #{
+            #    E:egpText(7*I,"[Parser] Something went wrong!", vec2(40, 167) + vec2(0, Move*I))
+            #    
+            #}
+            
+            
+            E:egpColor(7*I,vec(0,0,0))
+            E:egpSize(7*I,22)
+        }
+
+        
+
+    }
+    
+    
+    
+}
+
+
+ function number button(Ent:entity,ID:number){
+        local Cursor = E:egpCursor(Ent)
+        local BPos = E:egpPos(ID)
+        local BSize = E:egpSize(ID)/2
+        local Pressed = inrange(Cursor,BPos-BSize,BPos+BSize)
+        return Pressed
+   }
+
+
+
+
+function number check_buttons(Ent:entity, Amount:number)
+{
+    
+    
+    for(I = 1, Amount)
+    {
+        if(button(Ent, 13*I))
+        {
+           # Pressed = I
+            
+            
+            if(owner():keyPressed("E"))
+            {
+                
+                
+                
+                if(IsPlaying != I)
+                {
+                    PlayStatus = I
+                    return PlayStatus
+                }
+                
+                if(IsPlaying == I)
+                {
+                    PlayStatus = 0
+                    return PlayStatus
+                }
+                
+                
+            }
+        }
+        
+    }
+    
+    return IsPlaying
+    
+
+    
+}
+
+
+function number check_press(Ent:entity, Amount:number)
+{
+    
+    
+    for(I = 1, Amount)
+    {
+        if(button(Ent, 13*I))
+        {
+
+            
+            if(owner():keyPressed("E"))
+            {
+                
+                
+                
+                if(IsPlaying != I)
+                {
+                    PlayStatus = I
+                    return PlayStatus
+                }
+                
+                if(IsPlaying == I)
+                {
+                    PlayStatus = 0
+                    return PlayStatus
+                }
+                
+                
+            }
+            
+            
+        }
+        
+    }
+    
+    return IsPlaying
+    
+    
+    
+}
+
+
+function draw(Text:string)
+{
+    
+            #Info2 = Search:explode("[endl]")
+            
+            Info2 = Text:explode("[separator]")
+            
+            for(I = 1, IsPlaying)
+            {
+                Info = Info2[I,string]:explode("[endl]")
+            }
+            
+           # Song = Info2[1,string]:explode("[endl]")
+            
+            #Info = Song[1,string]:explode(" - ")
+            
+            #print(Song[1,string])
+            
+            #E:egpClear()
+            E:egpBox(1, vec2(0,0), vec2(1024,1024))
+            
+            E:egpBox(2, vec2(0,0), vec2(1024,140))
+            E:egpColor(2, vec(0,170,220))
+            
+            E:egpText(3, "ZAYCEV.NET", vec2(0,0))
+            E:egpSize(3,50)
+            E:egpPos(3, vec2(130,10))
+            
+            E:egpBox(8, vec2(0,160), vec2(1024, 10))
+            E:egpColor(8, vec(0,170,220))
+            
+            
+            FFT = entity():soundFFT("1")
+            
+            E:egpBox(9, vec2(0, 150), vec2(10+(FFT[1,number]*7),5))
+            E:egpColor(9, vec(0,255,0))
+            
+
+            
+            if(Info[1,string] == ""  || IsPlaying == 0)
+            {
+                E:egpText(4, "Музыка не выбрана", vec2(0, 120))
+                E:egpText(5, "", vec2(10, 120))
+                FFT[1,number] = 0
+            }
+            else
+            {
+                
+                Song = Info[1,string]:explode(" - ")
+                
+                #E:egpText(4, Song[1,string] + "       " + Info[4,string]:sub(1) + " ", vec2(10, 100))
+                E:egpText(4, Song[1,string], vec2(10, 100))
+                
+                
+                E:egpText(5, Song[2,string], vec2(10, 120))
+                
+            }
+               
+            
+
+            
+            E:egpColor(4, vec(0,0,0))
+            E:egpSize(4,24)
+
+            E:egpColor(5, vec(0,0,0))
+            E:egpSize(5,24)
+            
+            
+            E:egpText(6, "Поиск", vec2(200, 170))
+            E:egpColor(6, vec(0,0,0))
+            E:egpSize(6,30)
+            
+            
+}
+
+
+
+
+function chat()
+{
+    T = owner():lastSaid():explode(" ")
+   
+    
+    if(owner():lastSaid() != Last)
+    { 
+        
+        
+        if(T[1,string] == "/play") 
+        { 
+            hideChat(1)
+            
+            #IsPlaying = 1
+            
+            #A = play(owner():lastSaid():replace("/play ",""))
+            printColor(vec(255,255,255),"[Music Player] ",vec(0,255,0), "Function is disabled")
+
+        }
+        
+        if(T[1,string] == "/find") 
+        { 
+            hideChat(1)
+            #A = play(T)
+            
+            noDuplications()
+entity():setAlpha(0)
+entity():propNotSolid(234)
+entity():propFreeze(0)
+            
+            E:egpClear()
+            
+            Pos1 = 0
+            Pos2 = 0
+            
+            SearchResult = search_zaycev_net(owner():lastSaid():replace("/find ",""), 7)
+            printColor(vec(255,255,255),"[Music Player] ",vec(0,255,0), "Looking for a song...")
+        }
+
+        if(T[1,string] == "/stop") 
+        { 
+            hideChat(1)
+
+
+
+            
+            #IsPlaying = 0
+            
+            printColor(vec(255,255,255),"[Music Player] ",vec(0,255,0), "Stopping...")
+            
+            soundURLpause(1)
+            soundURLdelete(1)
+        }
+
+        if(T[1,string] == "/vol") 
+        { 
+            hideChat(1)
+            soundURLvolume(1,T[2,string]:toNumber()/100) 
+            
+            printColor(vec(255,255,255),"[Music Player] ",vec(0,255,0), "Changed Volume to " + T[2,string])
+            
+        }
+        
+        Last = owner():lastSaid()
+    }
+    
+    if(SearchResult == 0)
+    {
+        #if(T[1,string] == "/play") 
+        #{ 
+        #    hideChat(1)
+        #    #A = play(owner():lastSaid():replace("/play ",""))
+        #}
+        
+        
+        if(T[1,string] == "/find" && SearchResult == 0) 
+        { 
+            hideChat(1)
+            #A = play(T)
+            SearchResult = search_zaycev_net(owner():lastSaid():replace("/find ",""), 7)
+        }
+        
+
+    }
+    
+    
+    
+    
+}
+
+
+if(first())
+{
+    soundURLdelete(1)
+    soundURLpause(1)
+    
+    
+    entity():isWeldedTo():setMaterial("models/shiny")
+    
+    E = entity():isWeldedTo():wirelink()
+        
+    #[if(WT:type() != "gmod_wire_egp" & WT:type() != "gmod_wire_egp_emitter") 
+    {     
+        selfDestruct()
+        exit()
+    }]#
+        
+
+    
+    E:egpClear()
+
+}
+
+
+runOnChat(1)
+interval(100)
+
+IsPlaying = check_buttons(owner(),7)
+chat()
+draw(Search)
+draw_results(7, IsPlaying)
+IsPlaying_last = play()
+
+#IsPlaying = check_press(owner(),7)
